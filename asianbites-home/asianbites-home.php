@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Asian Bites Home
  * Description: Homepage modular para Asian Bites con shortcodes optimizados para Elementor + WooCommerce.
- * Version: 1.2.0
+ * Version: 1.3.0
  * Author: Asian Bites
  * Requires at least: 6.5
  * Requires PHP: 8.0
@@ -14,11 +14,15 @@ if (!defined('ABSPATH')) {
 
 final class AsianBites_Home {
     private const HANDLE = 'asianbites-home';
+    private const DEFAULT_HERO_SIZES = '(max-width: 767px) 100vw, 50vw';
 
     public static function init(): void {
         add_action('init', [__CLASS__, 'register_shortcodes']);
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
-        add_action('wp_head', [__CLASS__, 'output_meta_and_schema'], 20);
+
+        if (self::should_register_head_hook()) {
+            add_action('wp_head', [__CLASS__, 'output_meta_and_schema'], 20);
+        }
     }
 
     public static function register_shortcodes(): void {
@@ -68,11 +72,16 @@ final class AsianBites_Home {
     public static function render_home(array $atts = []): string {
         $atts = shortcode_atts([
             'dark' => '0',
+            'brand' => '0',
         ], $atts, 'ab_home');
 
         $classes = ['ab-home'];
         if ('1' === (string) $atts['dark'] || (bool) apply_filters('ab_home_enable_dark_mode_class', false)) {
             $classes[] = 'ab-home--dark';
+        }
+
+        if ('1' === (string) $atts['brand'] || (bool) apply_filters('ab_home_enable_brand_mode_class', false)) {
+            $classes[] = 'ab-home--brand';
         }
 
         $sections = [
@@ -108,7 +117,7 @@ final class AsianBites_Home {
             'hero_image_url' => '',
             'hero_alt' => 'Box Asian Bites abierto con productos asiáticos',
             'hero_srcset' => '',
-            'hero_sizes' => '(max-width: 767px) 100vw, 50vw',
+            'hero_sizes' => self::DEFAULT_HERO_SIZES,
             'hero_width' => '960',
             'hero_height' => '1080',
         ], $atts, 'ab_home_hero');
@@ -128,6 +137,8 @@ final class AsianBites_Home {
     }
 
     private static function build_hero_media(array $atts): string {
+        $validated_sizes = self::validate_responsive_attr((string) $atts['hero_sizes'], self::DEFAULT_HERO_SIZES);
+
         if (!empty($atts['hero_image_id'])) {
             return (string) wp_get_attachment_image(
                 (int) $atts['hero_image_id'],
@@ -138,8 +149,8 @@ final class AsianBites_Home {
                     'loading' => 'eager',
                     'fetchpriority' => 'high',
                     'decoding' => 'async',
-                    'sizes' => esc_attr($atts['hero_sizes']),
-                    'alt' => esc_attr($atts['hero_alt']),
+                    'sizes' => $validated_sizes,
+                    'alt' => esc_attr((string) $atts['hero_alt']),
                 ]
             );
         }
@@ -147,8 +158,8 @@ final class AsianBites_Home {
         if (!empty($atts['hero_image_url'])) {
             return self::render_template('hero-image', [
                 'hero_image_url' => esc_url_raw($atts['hero_image_url']),
-                'hero_srcset' => sanitize_text_field((string) $atts['hero_srcset']),
-                'hero_sizes' => sanitize_text_field((string) $atts['hero_sizes']),
+                'hero_srcset' => self::validate_responsive_attr((string) $atts['hero_srcset'], ''),
+                'hero_sizes' => $validated_sizes,
                 'hero_alt' => sanitize_text_field((string) $atts['hero_alt']),
                 'hero_width' => (int) $atts['hero_width'],
                 'hero_height' => (int) $atts['hero_height'],
@@ -158,8 +169,30 @@ final class AsianBites_Home {
         return '<div class="ab-hero__placeholder" role="img" aria-label="Placeholder visual editable del hero de Asian Bites"></div>';
     }
 
+    private static function validate_responsive_attr(string $value, string $fallback): string {
+        $value = trim($value);
+        if ('' === $value) {
+            return $fallback;
+        }
+
+        if (1 !== preg_match('/^[A-Za-z0-9\s,\.\%wx\(\)\-\/:]+$/', $value)) {
+            return $fallback;
+        }
+
+        return $value;
+    }
+
     public static function render_value(array $atts = []): string {
-        return self::render_template('value', []);
+        $default_items = [
+            ['title' => 'Curaduría real', 'body' => 'Seleccionamos marcas virales y clásicos de confianza.'],
+            ['title' => 'Precios claros', 'body' => 'Boxes para compartir o maratonear solo, sin letras chiquitas.'],
+            ['title' => 'Delivery express', 'body' => 'Despacho rápido en Bogotá con seguimiento simple.'],
+            ['title' => 'Suscripción flexible', 'body' => 'Recibe cada mes y pausa cuando quieras.'],
+        ];
+
+        return self::render_template('value', [
+            'items' => self::normalize_items((array) apply_filters('ab_home_value_items', $default_items), ['title', 'body']),
+        ]);
     }
 
     public static function render_categories(array $atts = []): string {
@@ -202,11 +235,27 @@ final class AsianBites_Home {
     }
 
     public static function render_how(array $atts = []): string {
-        return self::render_template('how', []);
+        $default_steps = [
+            ['number' => '01', 'title' => 'Elige tu vibe', 'body' => 'Compra por categorías o arma tu box desde cero.'],
+            ['number' => '02', 'title' => 'Recibe en casa', 'body' => 'Coordinamos tu entrega sin vueltas ni protocolos.'],
+            ['number' => '03', 'title' => 'Abre y disfruta', 'body' => 'Sirve, comparte y repite cuando quieras.'],
+        ];
+
+        return self::render_template('how', [
+            'steps' => self::normalize_items((array) apply_filters('ab_home_how_steps', $default_steps), ['number', 'title', 'body']),
+        ]);
     }
 
     public static function render_testimonials(array $atts = []): string {
-        return self::render_template('testimonials', []);
+        $default_testimonials = [
+            ['quote' => '“Literal llegó el mismo día. El ramen picante 10/10.”', 'author' => 'Camila, Chapinero'],
+            ['quote' => '“La suscripción me ahorra tiempo y siempre trae algo nuevo.”', 'author' => 'Mateo, Teusaquillo'],
+            ['quote' => '“Pedí box para regalo y fue éxito total en la oficina.”', 'author' => 'Sara, Usaquén'],
+        ];
+
+        return self::render_template('testimonials', [
+            'items' => self::normalize_items((array) apply_filters('ab_home_testimonials', $default_testimonials), ['quote', 'author']),
+        ]);
     }
 
     public static function render_about(array $atts = []): string {
@@ -214,14 +263,16 @@ final class AsianBites_Home {
     }
 
     public static function render_faq(array $atts = []): string {
+        $default_faqs = [
+            ['q' => '¿Hacen entregas el mismo día en Bogotá?', 'a' => 'Sí, según zona y hora de compra. Verás disponibilidad al finalizar tu pedido.'],
+            ['q' => '¿Puedo escoger productos en mi box?', 'a' => 'Sí. Puedes armar tu box manualmente o elegir uno curado por nosotros.'],
+            ['q' => '¿Cómo funciona la suscripción mensual?', 'a' => 'Te enviamos una selección mensual y puedes pausar o cancelar desde tu cuenta.'],
+            ['q' => '¿Qué medios de pago aceptan?', 'a' => 'Tarjeta débito/crédito, PSE y billeteras digitales habilitadas por WooCommerce.'],
+            ['q' => '¿Tienen opciones para regalo?', 'a' => 'Sí, contamos con kits listos para regalo y mensaje personalizado.'],
+        ];
+
         return self::render_template('faq', [
-            'faqs' => [
-                ['q' => '¿Hacen entregas el mismo día en Bogotá?', 'a' => 'Sí, según zona y hora de compra. Verás disponibilidad al finalizar tu pedido.'],
-                ['q' => '¿Puedo escoger productos en mi box?', 'a' => 'Sí. Puedes armar tu box manualmente o elegir uno curado por nosotros.'],
-                ['q' => '¿Cómo funciona la suscripción mensual?', 'a' => 'Te enviamos una selección mensual y puedes pausar o cancelar desde tu cuenta.'],
-                ['q' => '¿Qué medios de pago aceptan?', 'a' => 'Tarjeta débito/crédito, PSE y billeteras digitales habilitadas por WooCommerce.'],
-                ['q' => '¿Tienen opciones para regalo?', 'a' => 'Sí, contamos con kits listos para regalo y mensaje personalizado.'],
-            ],
+            'faqs' => self::normalize_items((array) apply_filters('ab_home_faq_items', $default_faqs), ['q', 'a']),
         ]);
     }
 
@@ -237,6 +288,35 @@ final class AsianBites_Home {
             'button_text' => sanitize_text_field($atts['button_text']),
             'button_url' => esc_url_raw($atts['button_url']),
         ]);
+    }
+
+    private static function normalize_items(array $items, array $keys): array {
+        $normalized = [];
+
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $entry = [];
+            foreach ($keys as $key) {
+                $entry[$key] = isset($item[$key]) ? sanitize_text_field((string) $item[$key]) : '';
+            }
+
+            $has_content = false;
+            foreach ($entry as $value) {
+                if ('' !== $value) {
+                    $has_content = true;
+                    break;
+                }
+            }
+
+            if ($has_content) {
+                $normalized[] = $entry;
+            }
+        }
+
+        return $normalized;
     }
 
     private static function is_rankmath_active(): bool {
@@ -265,8 +345,23 @@ final class AsianBites_Home {
         return $enabled;
     }
 
+    private static function should_register_head_hook(): bool {
+        if (!self::is_rankmath_active()) {
+            return true;
+        }
+
+        $force_meta = (bool) apply_filters('ab_home_force_output_meta', false);
+        $force_schema = (bool) apply_filters('ab_home_force_output_schema', false);
+
+        return $force_meta || $force_schema;
+    }
+
     public static function output_meta_and_schema(): void {
         if (!self::should_load_home_assets()) {
+            return;
+        }
+
+        if (self::is_rankmath_active() && !(bool) apply_filters('ab_home_force_output_meta', false) && !(bool) apply_filters('ab_home_force_output_schema', false)) {
             return;
         }
 
@@ -325,6 +420,7 @@ final class AsianBites_Home {
             'rows' => [
                 'home_context' => self::should_load_home_assets() ? 'true' : 'false',
                 'rankmath_detected' => self::is_rankmath_active() ? 'true' : 'false',
+                'head_hook_registered' => self::should_register_head_hook() ? 'true' : 'false',
                 'meta_enabled' => self::should_output_meta() ? 'true' : 'false',
                 'schema_enabled' => self::should_output_schema() ? 'true' : 'false',
                 'force_meta_override' => (bool) apply_filters('ab_home_force_output_meta', false) ? 'true' : 'false',

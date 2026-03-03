@@ -10,8 +10,9 @@
   --ab-color-wasablue: #7FDBDA;
   --ab-color-neon-matcha: #32E875;
   --ab-color-otaku: #B69EFF;
-  --ab-radius: 22px;
+  --ab-surface: var(--ab-color-pearl);
   --ab-shadow: 0 16px 40px rgba(27, 27, 30, 0.08);
+  --ab-radius: 22px;
   font-family: var(--ab-font-body);
 }
 
@@ -20,7 +21,7 @@
 .ab-home .ab-section--compact { padding-block: clamp(2rem, 3vw, 3rem); }
 .ab-home .ab-section--alt { background: rgba(255, 77, 166, 0.05); }
 .ab-home .ab-section--final {
-  background: linear-gradient(135deg, rgba(50, 232, 117, 0.15), rgba(182, 169, 255, 0.15));
+  background: linear-gradient(135deg, rgba(50, 232, 117, 0.12), rgba(182, 169, 255, 0.12));
   text-align: center;
 }
 
@@ -33,7 +34,6 @@
   line-height: 1.05;
   letter-spacing: -0.02em;
   font-family: var(--ab-font-headings);
-  color: var(--ab-color-carbon);
 }
 
 .ab-home h1 { font-size: clamp(2.2rem, 6vw, 4.8rem); }
@@ -66,7 +66,7 @@
 .ab-home .ab-btn:hover,
 .ab-home .ab-btn:focus-visible { transform: translateY(-2px); }
 .ab-home .ab-btn--primary { background: var(--ab-color-bubblegum); color: #fff; }
-.ab-home .ab-btn--ghost { background: transparent; border-color: var(--ab-color-carbon); color: var(--ab-color-carbon); }
+.ab-home .ab-btn--ghost { background: transparent; border-color: currentColor; color: inherit; }
 
 .ab-home .ab-chip-list {
   display: flex;
@@ -94,7 +94,7 @@
 .ab-home .ab-quote,
 .ab-home .ab-tile,
 .ab-home .ab-faq-item {
-  background: var(--ab-color-pearl);
+  background: var(--ab-surface);
   border-radius: var(--ab-radius);
   box-shadow: var(--ab-shadow);
   padding: 1.2rem;
@@ -107,7 +107,7 @@
   min-height: 150px;
   display: flex;
   align-items: end;
-  background-image: linear-gradient(120deg, rgba(255, 225, 86, 0.5), rgba(127, 219, 218, 0.45));
+  background-image: linear-gradient(120deg, rgba(255, 225, 86, 0.45), rgba(127, 219, 218, 0.4));
 }
 
 .ab-home .ab-hero__placeholder {
@@ -151,12 +151,23 @@
   .ab-home .ab-grid--2 { grid-template-columns: 1fr; }
 }
 
+.ab-home.ab-home--brand {
+  color: var(--ab-color-carbon);
+}
+
+.ab-home.ab-home--brand h1,
+.ab-home.ab-home--brand h2,
+.ab-home.ab-home--brand h3 {
+  color: var(--ab-color-carbon);
+}
+
 .ab-home.ab-home--dark {
   --ab-color-carbon: #FDF8F6;
   --ab-color-pearl: #1B1B1E;
+  --ab-surface: #1B1B1E;
 }
 
 .ab-home.ab-home--dark .ab-btn--ghost {
-  border-color: #FDF8F6;
-  color: #FDF8F6;
+  border-color: currentColor;
+  color: inherit;
 }
