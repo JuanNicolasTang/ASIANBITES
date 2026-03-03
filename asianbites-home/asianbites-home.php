@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Asian Bites Home
  * Description: Homepage modular para Asian Bites con shortcodes optimizados para Elementor + WooCommerce.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Asian Bites
  * Requires at least: 6.5
  * Requires PHP: 8.0
@@ -36,8 +36,7 @@ final class AsianBites_Home {
     }
 
     private static function should_load_home_assets(): bool {
-        $default = is_front_page() || is_home();
-        return (bool) apply_filters('ab_home_should_enqueue', $default);
+        return (bool) apply_filters('ab_home_should_enqueue', is_front_page());
     }
 
     public static function enqueue_assets(): void {
@@ -72,11 +71,7 @@ final class AsianBites_Home {
         ], $atts, 'ab_home');
 
         $classes = ['ab-home'];
-        if ('1' === (string) $atts['dark']) {
-            $classes[] = 'ab-home--dark';
-        }
-
-        if ((bool) apply_filters('ab_home_enable_dark_mode_class', false)) {
+        if ('1' === (string) $atts['dark'] || (bool) apply_filters('ab_home_enable_dark_mode_class', false)) {
             $classes[] = 'ab-home--dark';
         }
 
@@ -92,7 +87,10 @@ final class AsianBites_Home {
             self::render_final_cta(),
         ];
 
-        return sprintf('<div class="%1$s">%2$s</div>', esc_attr(implode(' ', array_unique($classes))), implode("\n", $sections));
+        return self::render_template('home-wrapper', [
+            'classes'  => implode(' ', array_unique($classes)),
+            'sections' => implode("\n", array_filter($sections)),
+        ]);
     }
 
     public static function render_hero(array $atts = []): string {
@@ -115,21 +113,18 @@ final class AsianBites_Home {
             'hero_height' => '1080',
         ], $atts, 'ab_home_hero');
 
-        $image_html = self::build_hero_media($atts);
-
-        return sprintf(
-            '<section class="ab-section ab-hero"><div class="ab-container ab-hero__grid"><div class="ab-hero__content" data-ab-reveal><p class="ab-eyebrow">Asian Bites · Bogotá</p><h1>%1$s</h1><p class="ab-subtitle">%2$s</p><div class="ab-cta-row"><a class="ab-btn ab-btn--primary" href="%3$s">%4$s</a><a class="ab-btn ab-btn--ghost" href="%5$s">%6$s</a></div><ul class="ab-chip-list"><li>%7$s</li><li>%8$s</li><li>%9$s</li></ul></div><div class="ab-hero__media" data-ab-reveal>%10$s</div></div></section>',
-            esc_html($atts['title']),
-            esc_html($atts['subtitle']),
-            esc_url($atts['cta_primary_url']),
-            esc_html($atts['cta_primary_text']),
-            esc_url($atts['cta_secondary_url']),
-            esc_html($atts['cta_secondary_text']),
-            esc_html($atts['chip_1']),
-            esc_html($atts['chip_2']),
-            esc_html($atts['chip_3']),
-            $image_html
-        );
+        return self::render_template('hero', [
+            'title' => sanitize_text_field($atts['title']),
+            'subtitle' => sanitize_text_field($atts['subtitle']),
+            'cta_primary_text' => sanitize_text_field($atts['cta_primary_text']),
+            'cta_primary_url' => esc_url_raw($atts['cta_primary_url']),
+            'cta_secondary_text' => sanitize_text_field($atts['cta_secondary_text']),
+            'cta_secondary_url' => esc_url_raw($atts['cta_secondary_url']),
+            'chip_1' => sanitize_text_field($atts['chip_1']),
+            'chip_2' => sanitize_text_field($atts['chip_2']),
+            'chip_3' => sanitize_text_field($atts['chip_3']),
+            'image_html' => self::build_hero_media($atts),
+        ]);
     }
 
     private static function build_hero_media(array $atts): string {
@@ -150,24 +145,21 @@ final class AsianBites_Home {
         }
 
         if (!empty($atts['hero_image_url'])) {
-            $srcset = !empty($atts['hero_srcset']) ? sprintf(' srcset="%s"', esc_attr($atts['hero_srcset'])) : '';
-
-            return sprintf(
-                '<img class="ab-hero__image" src="%1$s"%2$s sizes="%3$s" alt="%4$s" width="%5$d" height="%6$d" loading="eager" fetchpriority="high" decoding="async">',
-                esc_url($atts['hero_image_url']),
-                $srcset,
-                esc_attr($atts['hero_sizes']),
-                esc_attr($atts['hero_alt']),
-                (int) $atts['hero_width'],
-                (int) $atts['hero_height']
-            );
+            return self::render_template('hero-image', [
+                'hero_image_url' => esc_url_raw($atts['hero_image_url']),
+                'hero_srcset' => sanitize_text_field((string) $atts['hero_srcset']),
+                'hero_sizes' => sanitize_text_field((string) $atts['hero_sizes']),
+                'hero_alt' => sanitize_text_field((string) $atts['hero_alt']),
+                'hero_width' => (int) $atts['hero_width'],
+                'hero_height' => (int) $atts['hero_height'],
+            ]);
         }
 
         return '<div class="ab-hero__placeholder" role="img" aria-label="Placeholder visual editable del hero de Asian Bites"></div>';
     }
 
     public static function render_value(array $atts = []): string {
-        return '<section class="ab-section"><div class="ab-container" data-ab-reveal><h2>Tu antojo asiático, resuelto en minutos</h2><div class="ab-grid ab-grid--4"><article class="ab-card"><h3>Curaduría real</h3><p>Seleccionamos marcas virales y clásicos de confianza.</p></article><article class="ab-card"><h3>Precios claros</h3><p>Boxes para compartir o maratonear solo, sin letras chiquitas.</p></article><article class="ab-card"><h3>Delivery express</h3><p>Despacho rápido en Bogotá con seguimiento simple.</p></article><article class="ab-card"><h3>Suscripción flexible</h3><p>Recibe cada mes y pausa cuando quieras.</p></article></div></div></section>';
+        return self::render_template('value', []);
     }
 
     public static function render_categories(array $atts = []): string {
@@ -182,17 +174,16 @@ final class AsianBites_Home {
             'cat_4_url' => '/categoria-producto/regalos',
         ], $atts, 'ab_home_categories');
 
-        return sprintf(
-            '<section class="ab-section ab-section--alt"><div class="ab-container" data-ab-reveal><h2>Explora por categorías</h2><div class="ab-grid ab-grid--2"><a class="ab-tile" href="%1$s"><h3>%2$s</h3></a><a class="ab-tile" href="%3$s"><h3>%4$s</h3></a><a class="ab-tile" href="%5$s"><h3>%6$s</h3></a><a class="ab-tile" href="%7$s"><h3>%8$s</h3></a></div></div></section>',
-            esc_url($atts['cat_1_url']),
-            esc_html($atts['cat_1_title']),
-            esc_url($atts['cat_2_url']),
-            esc_html($atts['cat_2_title']),
-            esc_url($atts['cat_3_url']),
-            esc_html($atts['cat_3_title']),
-            esc_url($atts['cat_4_url']),
-            esc_html($atts['cat_4_title'])
-        );
+        return self::render_template('categories', [
+            'cat_1_title' => sanitize_text_field($atts['cat_1_title']),
+            'cat_1_url' => esc_url_raw($atts['cat_1_url']),
+            'cat_2_title' => sanitize_text_field($atts['cat_2_title']),
+            'cat_2_url' => esc_url_raw($atts['cat_2_url']),
+            'cat_3_title' => sanitize_text_field($atts['cat_3_title']),
+            'cat_3_url' => esc_url_raw($atts['cat_3_url']),
+            'cat_4_title' => sanitize_text_field($atts['cat_4_title']),
+            'cat_4_url' => esc_url_raw($atts['cat_4_url']),
+        ]);
     }
 
     public static function render_best_sellers(array $atts = []): string {
@@ -204,40 +195,34 @@ final class AsianBites_Home {
 
         $woo_shortcode = sprintf('[products limit="%d" columns="%d" orderby="popularity"]', (int) $atts['limit'], (int) $atts['columns']);
 
-        return sprintf('<section class="ab-section"><div class="ab-container" data-ab-reveal><h2>%1$s</h2><div class="ab-products">%2$s</div></div></section>', esc_html($atts['title']), do_shortcode($woo_shortcode));
+        return self::render_template('best-sellers', [
+            'title' => sanitize_text_field($atts['title']),
+            'products_html' => do_shortcode($woo_shortcode),
+        ]);
     }
 
     public static function render_how(array $atts = []): string {
-        return '<section class="ab-section ab-section--alt"><div class="ab-container" data-ab-reveal><h2>Cómo funciona</h2><div class="ab-grid ab-grid--3"><article class="ab-step"><span>01</span><h3>Elige tu vibe</h3><p>Compra por categorías o arma tu box desde cero.</p></article><article class="ab-step"><span>02</span><h3>Recibe en casa</h3><p>Coordinamos tu entrega sin vueltas ni protocolos.</p></article><article class="ab-step"><span>03</span><h3>Abre y disfruta</h3><p>Sirve, comparte y repite cuando quieras.</p></article></div></div></section>';
+        return self::render_template('how', []);
     }
 
     public static function render_testimonials(array $atts = []): string {
-        return '<section class="ab-section"><div class="ab-container" data-ab-reveal><h2>Lo que dice la comunidad</h2><div class="ab-grid ab-grid--3"><figure class="ab-quote"><blockquote>“Literal llegó el mismo día. El ramen picante 10/10.”</blockquote><figcaption>— Camila, Chapinero</figcaption></figure><figure class="ab-quote"><blockquote>“La suscripción me ahorra tiempo y siempre trae algo nuevo.”</blockquote><figcaption>— Mateo, Teusaquillo</figcaption></figure><figure class="ab-quote"><blockquote>“Pedí box para regalo y fue éxito total en la oficina.”</blockquote><figcaption>— Sara, Usaquén</figcaption></figure></div></div></section>';
+        return self::render_template('testimonials', []);
     }
 
     public static function render_about(array $atts = []): string {
-        return '<section class="ab-section ab-section--compact"><div class="ab-container" data-ab-reveal><h2>Somos Asian Bites</h2><p>Nacimos en Bogotá para acercar lo mejor de la despensa asiática a tu rutina real: rápida, social y sin complicaciones. Curamos productos que sí valen la pena para que solo te preocupes por abrir, servir y seguir.</p></div></section>';
+        return self::render_template('about', []);
     }
 
     public static function render_faq(array $atts = []): string {
-        $faqs = [
-            ['q' => '¿Hacen entregas el mismo día en Bogotá?', 'a' => 'Sí, según zona y hora de compra. Verás disponibilidad al finalizar tu pedido.'],
-            ['q' => '¿Puedo escoger productos en mi box?', 'a' => 'Sí. Puedes armar tu box manualmente o elegir uno curado por nosotros.'],
-            ['q' => '¿Cómo funciona la suscripción mensual?', 'a' => 'Te enviamos una selección mensual y puedes pausar o cancelar desde tu cuenta.'],
-            ['q' => '¿Qué medios de pago aceptan?', 'a' => 'Tarjeta débito/crédito, PSE y billeteras digitales habilitadas por WooCommerce.'],
-            ['q' => '¿Tienen opciones para regalo?', 'a' => 'Sí, contamos con kits listos para regalo y mensaje personalizado.'],
-        ];
-
-        $items = array_map(
-            static fn(array $faq): string => sprintf(
-                '<details class="ab-faq-item"><summary>%1$s</summary><p>%2$s</p></details>',
-                esc_html($faq['q']),
-                esc_html($faq['a'])
-            ),
-            $faqs
-        );
-
-        return sprintf('<section class="ab-section"><div class="ab-container" data-ab-reveal><h2>Preguntas frecuentes</h2><div class="ab-faq">%s</div></div></section>', wp_kses_post(implode('', $items)));
+        return self::render_template('faq', [
+            'faqs' => [
+                ['q' => '¿Hacen entregas el mismo día en Bogotá?', 'a' => 'Sí, según zona y hora de compra. Verás disponibilidad al finalizar tu pedido.'],
+                ['q' => '¿Puedo escoger productos en mi box?', 'a' => 'Sí. Puedes armar tu box manualmente o elegir uno curado por nosotros.'],
+                ['q' => '¿Cómo funciona la suscripción mensual?', 'a' => 'Te enviamos una selección mensual y puedes pausar o cancelar desde tu cuenta.'],
+                ['q' => '¿Qué medios de pago aceptan?', 'a' => 'Tarjeta débito/crédito, PSE y billeteras digitales habilitadas por WooCommerce.'],
+                ['q' => '¿Tienen opciones para regalo?', 'a' => 'Sí, contamos con kits listos para regalo y mensaje personalizado.'],
+            ],
+        ]);
     }
 
     public static function render_final_cta(array $atts = []): string {
@@ -247,19 +232,22 @@ final class AsianBites_Home {
             'button_url' => '/tienda',
         ], $atts, 'ab_home_final_cta');
 
-        return sprintf('<section class="ab-section ab-section--final"><div class="ab-container" data-ab-reveal><h2>%1$s</h2><a class="ab-btn ab-btn--primary" href="%2$s">%3$s</a></div></section>', esc_html($atts['title']), esc_url($atts['button_url']), esc_html($atts['button_text']));
+        return self::render_template('final-cta', [
+            'title' => sanitize_text_field($atts['title']),
+            'button_text' => sanitize_text_field($atts['button_text']),
+            'button_url' => esc_url_raw($atts['button_url']),
+        ]);
     }
 
     private static function is_rankmath_active(): bool {
-        return defined('RANK_MATH_VERSION') || class_exists('RankMath');
+        return defined('RANK_MATH_VERSION') || class_exists('RankMath\Core\Manager') || class_exists('RankMath');
     }
 
     private static function should_output_meta(): bool {
-        $enabled  = (bool) apply_filters('ab_home_output_meta', true);
-        $force    = (bool) apply_filters('ab_home_force_output_meta', false);
-        $rankmath = self::is_rankmath_active();
+        $enabled = (bool) apply_filters('ab_home_output_meta', true);
+        $force = (bool) apply_filters('ab_home_force_output_meta', false);
 
-        if ($rankmath && !$force) {
+        if (self::is_rankmath_active() && !$force) {
             return false;
         }
 
@@ -267,11 +255,10 @@ final class AsianBites_Home {
     }
 
     private static function should_output_schema(): bool {
-        $enabled  = (bool) apply_filters('ab_home_output_schema', true);
-        $force    = (bool) apply_filters('ab_home_force_output_meta', false);
-        $rankmath = self::is_rankmath_active();
+        $enabled = (bool) apply_filters('ab_home_output_schema', true);
+        $force = (bool) apply_filters('ab_home_force_output_schema', false);
 
-        if ($rankmath && !$force) {
+        if (self::is_rankmath_active() && !$force) {
             return false;
         }
 
@@ -284,7 +271,7 @@ final class AsianBites_Home {
         }
 
         $site_name = get_bloginfo('name');
-        $home_url  = home_url('/');
+        $home_url = home_url('/');
 
         if (self::should_output_meta()) {
             echo '<meta property="og:type" content="website">' . "\n";
@@ -300,25 +287,25 @@ final class AsianBites_Home {
         if (self::should_output_schema()) {
             $schema = [
                 '@context' => 'https://schema.org',
-                '@graph'   => [
+                '@graph' => [
                     [
-                        '@type'       => 'Organization',
-                        '@id'         => trailingslashit($home_url) . '#organization',
-                        'name'        => $site_name,
-                        'url'         => $home_url,
+                        '@type' => 'Organization',
+                        '@id' => trailingslashit($home_url) . '#organization',
+                        'name' => $site_name,
+                        'url' => $home_url,
                         'description' => 'Boxes y remesas de productos asiáticos por delivery y suscripción mensual en Bogotá.',
                     ],
                     [
                         '@type' => 'WebSite',
-                        '@id'   => trailingslashit($home_url) . '#website',
-                        'url'   => $home_url,
-                        'name'  => $site_name,
+                        '@id' => trailingslashit($home_url) . '#website',
+                        'url' => $home_url,
+                        'name' => $site_name,
                         'publisher' => [
                             '@id' => trailingslashit($home_url) . '#organization',
                         ],
                         'potentialAction' => [
-                            '@type'       => 'SearchAction',
-                            'target'      => home_url('/?s={search_term_string}'),
+                            '@type' => 'SearchAction',
+                            'target' => home_url('/?s={search_term_string}'),
                             'query-input' => 'required name=search_term_string',
                         ],
                     ],
@@ -334,20 +321,31 @@ final class AsianBites_Home {
             return '';
         }
 
-        $rows = [
-            'home_context'        => self::should_load_home_assets() ? 'true' : 'false',
-            'rankmath_detected'   => self::is_rankmath_active() ? 'true' : 'false',
-            'meta_enabled'        => self::should_output_meta() ? 'true' : 'false',
-            'schema_enabled'      => self::should_output_schema() ? 'true' : 'false',
-            'force_meta_override' => (bool) apply_filters('ab_home_force_output_meta', false) ? 'true' : 'false',
-        ];
+        return self::render_template('debug', [
+            'rows' => [
+                'home_context' => self::should_load_home_assets() ? 'true' : 'false',
+                'rankmath_detected' => self::is_rankmath_active() ? 'true' : 'false',
+                'meta_enabled' => self::should_output_meta() ? 'true' : 'false',
+                'schema_enabled' => self::should_output_schema() ? 'true' : 'false',
+                'force_meta_override' => (bool) apply_filters('ab_home_force_output_meta', false) ? 'true' : 'false',
+                'force_schema_override' => (bool) apply_filters('ab_home_force_output_schema', false) ? 'true' : 'false',
+            ],
+        ]);
+    }
 
-        $items = '';
-        foreach ($rows as $key => $value) {
-            $items .= sprintf('<li><strong>%1$s:</strong> %2$s</li>', esc_html($key), esc_html($value));
+    private static function render_template(string $template_name, array $data): string {
+        $template_file = plugin_dir_path(__FILE__) . 'templates/' . $template_name . '.php';
+
+        if (!file_exists($template_file)) {
+            return '';
         }
 
-        return '<div class="ab-home-debug"><h3>AB Home Debug</h3><ul>' . wp_kses_post($items) . '</ul></div>';
+        extract($data, EXTR_SKIP);
+
+        ob_start();
+        include $template_file;
+
+        return (string) ob_get_clean();
     }
 
     private static function critical_hero_css(): string {
