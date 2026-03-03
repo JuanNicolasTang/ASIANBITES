@@ -1,100 +1,129 @@
 # Asian Bites Homepage (WordPress + Elementor)
 
-## Opción técnica elegida
-Se implementó **Opción 1 (plugin `asianbites-home`)** porque:
-1. Permite cargar CSS/JS solo en contexto de home usando `ab_home_should_enqueue` (por defecto `is_front_page()`).
-2. Mantiene la home modular con shortcodes reutilizables dentro de Elementor (sin tocar archivos del theme).
-3. Simplifica mantenimiento/despliegue y aísla el comportamiento del home en un plugin.
-4. Usa templates PHP (`templates/*.php`) en vez de strings HTML gigantes para mejorar mantenibilidad.
+## Uso rápido en Elementor
 
-## Estructura
-- `asianbites-home/asianbites-home.php`
-- `asianbites-home/assets/css/home.css`
-- `asianbites-home/assets/js/home.js`
-- `asianbites-home/templates/*.php`
+### Home completa
+Usa un widget **Shortcode** con:
 
-## Instalación
-1. Copia la carpeta `asianbites-home` dentro de `wp-content/plugins/`.
-2. Activa el plugin en `WP Admin > Plugins`.
-3. Ve a `Páginas > Inicio` y edita con Elementor.
-4. Inserta un widget **Shortcode** con: `[ab_home]`.
+```txt
+[ab_home]
+```
 
-### Modos de estilo opcionales
-- Brand mode (paleta/estilo marca opt-in):
-  ```
-  [ab_home brand="1"]
-  ```
-- Dark mode (opt-in):
-  ```
-  [ab_home dark="1"]
-  ```
-- Puedes combinar ambos:
-  ```
-  [ab_home brand="1" dark="1"]
-  ```
+### Secciones individuales
+Si prefieres armar la landing por bloques dentro de Elementor:
 
-## Edición sin código
-- Textos y links de Hero/CTA/Categorías se editan con atributos del shortcode.
-- Ejemplo Hero:
-  ```
-  [ab_home_hero title="Abre, sirve, sigue." cta_primary_url="/tienda" hero_image_id="123"]
-  ```
-- Para imagen hero usa:
-  - `hero_image_id` (ID de Media Library, recomendado por srcset automático de WordPress).
-  - o `hero_image_url` + `hero_srcset` + `hero_sizes` para control manual.
-- Si no configuras imagen hero, el plugin renderiza un placeholder interno (sin requests externos).
+```txt
+[ab_home_hero]
+[ab_home_value]
+[ab_home_categories]
+[ab_home_best_sellers]
+[ab_home_how]
+[ab_home_testimonials]
+[ab_home_about]
+[ab_home_faq]
+[ab_home_final_cta]
+```
 
-## Rank Math (SEO-neutral por defecto)
-Si Rank Math está activo (`defined('RANK_MATH_VERSION')` o clase detectada), el plugin **no imprime** por defecto:
-- OG meta
-- Twitter meta
-- JSON-LD (`Organization` + `WebSite` + `SearchAction`)
+> El plugin ahora también carga CSS/JS al editar en Elementor la página configurada como `page_on_front` y en `elementor-preview`, evitando la vista en blanco del editor para la home.
 
-Además, el plugin evita registrar `wp_head` para esta salida cuando Rank Math está activo y no hay force flags, reduciendo riesgo de duplicados.
+## Imágenes editables
 
-> Recomendación: dejar OG/Twitter/schema en **Rank Math como fuente única**.
+### Hero (LCP)
+En el hero usa `hero_image_id` (recomendado):
 
-### Filtros de SEO
-- `ab_home_output_meta` (bool, default `true`)
-- `ab_home_output_schema` (bool, default `true`)
-- `ab_home_force_output_meta` (bool, default `false`) → fuerza meta incluso con Rank Math.
-- `ab_home_force_output_schema` (bool, default `false`) → fuerza schema incluso con Rank Math.
+```txt
+[ab_home_hero hero_image_id="123"]
+```
 
-## Filtros de contenido overrideable
-- `ab_home_value_items` → cards de propuesta de valor (`title`, `body`)
-- `ab_home_how_steps` → pasos (`number`, `title`, `body`)
-- `ab_home_testimonials` → testimonios (`quote`, `author`)
-- `ab_home_faq_items` → FAQ (`q`, `a`)
+También existe `hero_image_url` (manual), pero `hero_image_id` aprovecha `srcset` nativo de WordPress.
+
+### Categorías (nuevas)
+Cada tile de categorías acepta imagen opcional por ID:
+
+- `cat_1_image_id`
+- `cat_2_image_id`
+- `cat_3_image_id`
+- `cat_4_image_id`
 
 Ejemplo:
-```php
-add_filter('ab_home_faq_items', static function ($items) {
-    return [
-        ['q' => '¿Entregan domingos?', 'a' => 'Sí, según cobertura y franja disponible.'],
-        ['q' => '¿Puedo pausar suscripción?', 'a' => 'Sí, desde tu cuenta sin penalidad.'],
-    ];
-});
+
+```txt
+[ab_home_categories
+  cat_1_title="Soju Fresh"
+  cat_1_url="/categoria-producto/soju-fresh"
+  cat_1_image_id="301"
+  cat_2_image_id="302"
+  cat_3_image_id="303"
+  cat_4_image_id="304"
+]
 ```
 
-## Filtros de comportamiento
-- `ab_home_should_enqueue` (bool, default `is_front_page()`) → controla en qué páginas encolar assets.
-- `ab_home_enable_dark_mode_class` (bool) → fuerza `.ab-home--dark`.
-- `ab_home_enable_brand_mode_class` (bool) → fuerza `.ab-home--brand`.
+Estas imágenes se renderizan con `wp_get_attachment_image` y `loading="lazy"`.
 
-Ejemplo para soportar blog-home:
-```php
-add_filter('ab_home_should_enqueue', static function ($should) {
-    return $should || is_home();
-});
+### Mascota “Mr. Abi” (nueva)
+En About puedes mostrar sticker/mascota opcional:
+
+```txt
+[ab_home_about about_mascot_image_id="401"]
 ```
 
-## Debug para QA
-- Shortcode: `[ab_home_debug]`
-- Solo visible para admins (`manage_options`).
-- Muestra: detección de Rank Math, si el hook de head está registrado y estado final de meta/schema con force flags.
+La imagen se renderiza sin deformarse (dimensiones naturales, `height:auto`, alt de Media Library).
 
-## QA / CWV
-- LCP: hero con `loading="eager"`, `fetchpriority="high"`, `decoding="async"` y dimensiones.
-- CLS: layout del hero reservado con dimensiones/aspect-ratio y grilla estable.
-- INP: JS mínimo con `IntersectionObserver`, sin jQuery.
-- Accesibilidad: estructura semántica, un solo H1, FAQ con `<details><summary>`.
+## Global Colors / Fonts de Elementor (brandbook)
+
+El CSS del plugin está scopeado a `.ab-home` y prioriza tokens globales de Elementor:
+
+- Colores:
+  - `--e-global-color-primary`
+  - `--e-global-color-secondary`
+  - `--e-global-color-accent`
+  - `--e-global-color-text`
+  - `--e-global-color-background`
+- Tipografías:
+  - `--e-global-typography-primary` (familia para títulos)
+  - `--e-global-typography-secondary` (mensajes especiales)
+  - `--e-global-typography-text` (cuerpo)
+  - `--e-global-typography-accent` (si tu sistema lo usa para variantes)
+
+Si un token no existe, el plugin cae a fallback de brandbook:
+
+- Bubblegum `#FF4DA6`
+- Carbon `#1B1B1E`
+- Pearl `#FDF8F6`
+- Fredoka (headings), Usagi (mensajes especiales), Work Sans (texto)
+
+### Mapeo recomendado en Elementor (Site Settings)
+- **Primary** → Carbon `#1B1B1E`
+- **Secondary** → Pearl `#FDF8F6`
+- **Accent** → Bubblegum `#FF4DA6`
+- **Text** → Carbon `#1B1B1E`
+- **Background** → Pearl `#FDF8F6`
+- **Typography Primary** → Fredoka
+- **Typography Secondary** → Usagi
+- **Typography Text** → Work Sans
+
+## Copy base alineado a marca (defaults)
+
+Los defaults de Hero/Value/About/Categories ahora reflejan:
+
+- foco actual en Soju (Fresh, Uva Verde, Durazno)
+- tono “vida real” + planes
+- mantra: “Abre, sirve, sigue. Sin protocolos. Sin complicaciones.”
+- expansión futura a sopas/snacks/sake sin prometer fechas
+
+## Modos opcionales
+- Brand mode:
+  ```txt
+  [ab_home brand="1"]
+  ```
+- Dark mode:
+  ```txt
+  [ab_home dark="1"]
+  ```
+
+## Filtros útiles
+- `ab_home_should_enqueue`
+- `ab_home_value_items`
+- `ab_home_how_steps`
+- `ab_home_testimonials`
+- `ab_home_faq_items`

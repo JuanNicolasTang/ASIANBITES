@@ -1,7 +1,7 @@
 <section class="ab-section ab-hero">
     <div class="ab-container ab-hero__grid">
         <div class="ab-hero__content" data-ab-reveal>
-            <p class="ab-eyebrow">Asian Bites · Bogotá</p>
+            <p class="ab-eyebrow">Especialistas en Soju · Bogotá</p>
             <h1><?php echo esc_html($title); ?></h1>
             <p class="ab-subtitle"><?php echo esc_html($subtitle); ?></p>
             <div class="ab-cta-row">
