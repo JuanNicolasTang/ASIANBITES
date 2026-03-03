@@ -1,0 +1,2 @@
+<?php $srcset_attr = !empty($hero_srcset) ? sprintf(' srcset="%s"', esc_attr($hero_srcset)) : ''; ?>
+<img class="ab-hero__image" src="<?php echo esc_url($hero_image_url); ?>"<?php echo $srcset_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> sizes="<?php echo esc_attr($hero_sizes); ?>" alt="<?php echo esc_attr($hero_alt); ?>" width="<?php echo (int) $hero_width; ?>" height="<?php echo (int) $hero_height; ?>" loading="eager" fetchpriority="high" decoding="async">
