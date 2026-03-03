@@ -1,6 +1,11 @@
 <section class="ab-section ab-section--compact">
-    <div class="ab-container" data-ab-reveal>
-        <h2>Somos Asian Bites</h2>
-        <p>Nacimos en Bogotá para acercar lo mejor de la despensa asiática a tu rutina real: rápida, social y sin complicaciones. Curamos productos que sí valen la pena para que solo te preocupes por abrir, servir y seguir.</p>
+    <div class="ab-container ab-about" data-ab-reveal>
+        <div>
+            <h2><?php echo esc_html($title); ?></h2>
+            <p><?php echo esc_html($summary); ?></p>
+        </div>
+        <?php if (!empty($mascot_html)) : ?>
+            <div class="ab-about__mascot-wrap"><?php echo wp_kses_post($mascot_html); ?></div>
+        <?php endif; ?>
     </div>
 </section>

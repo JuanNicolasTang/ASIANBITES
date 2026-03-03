@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Asian Bites Home
  * Description: Homepage modular para Asian Bites con shortcodes optimizados para Elementor + WooCommerce.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Author: Asian Bites
  * Requires at least: 6.5
  * Requires PHP: 8.0
@@ -19,6 +19,7 @@ final class AsianBites_Home {
     public static function init(): void {
         add_action('init', [__CLASS__, 'register_shortcodes']);
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_assets_for_elementor_editor']);
 
         if (self::should_register_head_hook()) {
             add_action('wp_head', [__CLASS__, 'output_meta_and_schema'], 20);
@@ -40,11 +41,57 @@ final class AsianBites_Home {
     }
 
     private static function should_load_home_assets(): bool {
-        return (bool) apply_filters('ab_home_should_enqueue', is_front_page());
+        $should_enqueue_front = (bool) apply_filters('ab_home_should_enqueue', is_front_page());
+
+        return $should_enqueue_front || self::is_elementor_front_page_preview_request();
+    }
+
+    private static function is_elementor_front_page_preview_request(): bool {
+        $front_page_id = (int) get_option('page_on_front');
+
+        if (0 === $front_page_id) {
+            return false;
+        }
+
+        $elementor_preview_id = isset($_GET['elementor-preview']) ? absint(wp_unslash((string) $_GET['elementor-preview'])) : 0;
+
+        return $elementor_preview_id === $front_page_id;
+    }
+
+    private static function is_elementor_front_page_editor_request(): bool {
+        if (!is_admin()) {
+            return false;
+        }
+
+        $front_page_id = (int) get_option('page_on_front');
+        if (0 === $front_page_id) {
+            return false;
+        }
+
+        $action = isset($_GET['action']) ? sanitize_key(wp_unslash((string) $_GET['action'])) : '';
+        $post_id = isset($_GET['post']) ? absint(wp_unslash((string) $_GET['post'])) : 0;
+
+        return 'elementor' === $action && $post_id === $front_page_id;
     }
 
     public static function enqueue_assets(): void {
         if (!self::should_load_home_assets()) {
+            return;
+        }
+
+        self::enqueue_home_assets();
+    }
+
+    public static function enqueue_assets_for_elementor_editor(): void {
+        if (!self::is_elementor_front_page_editor_request()) {
+            return;
+        }
+
+        self::enqueue_home_assets();
+    }
+
+    private static function enqueue_home_assets(): void {
+        if (wp_style_is(self::HANDLE, 'enqueued')) {
             return;
         }
 
@@ -105,14 +152,14 @@ final class AsianBites_Home {
     public static function render_hero(array $atts = []): string {
         $atts = shortcode_atts([
             'title' => 'Abre, sirve, sigue.',
-            'subtitle' => 'Tu box asiático llega a Bogotá con snacks, ramen y favoritos listos para disfrutar sin protocolos.',
-            'cta_primary_text' => 'Arma tu box',
+            'subtitle' => 'Soju Fresh, Uva Verde y Durazno para tus planes de vida real. Frío, fácil y listo para compartir.',
+            'cta_primary_text' => 'Pedir Soju ahora',
             'cta_primary_url' => '/tienda',
-            'cta_secondary_text' => 'Suscríbete mensual',
-            'cta_secondary_url' => '/suscripcion',
-            'chip_1' => 'Delivery rápido en Bogotá',
-            'chip_2' => 'Sin protocolos. Sin complicaciones.',
-            'chip_3' => 'Cancela cuando quieras',
+            'cta_secondary_text' => 'Ver todos los sabores',
+            'cta_secondary_url' => '/categoria-producto/soju',
+            'chip_1' => 'Especialistas en Soju: Fresh, Uva Verde y Durazno',
+            'chip_2' => 'Abre, sirve, sigue. Sin protocolos. Sin complicaciones.',
+            'chip_3' => 'Próximamente: sopas, snacks y sake',
             'hero_image_id' => '',
             'hero_image_url' => '',
             'hero_alt' => 'Box Asian Bites abierto con productos asiáticos',
@@ -184,10 +231,10 @@ final class AsianBites_Home {
 
     public static function render_value(array $atts = []): string {
         $default_items = [
-            ['title' => 'Curaduría real', 'body' => 'Seleccionamos marcas virales y clásicos de confianza.'],
-            ['title' => 'Precios claros', 'body' => 'Boxes para compartir o maratonear solo, sin letras chiquitas.'],
-            ['title' => 'Delivery express', 'body' => 'Despacho rápido en Bogotá con seguimiento simple.'],
-            ['title' => 'Suscripción flexible', 'body' => 'Recibe cada mes y pausa cuando quieras.'],
+            ['title' => 'Soju para planes reales', 'body' => 'Fresh, Uva Verde y Durazno listos para prender cualquier parche.'],
+            ['title' => 'Rápido y sin vueltas', 'body' => 'Compra fácil, entrega ágil y cero protocolos para disfrutar ya.'],
+            ['title' => 'Sabor confiable', 'body' => 'Curamos productos que sí cumplen: chill, accesibles y de calidad.'],
+            ['title' => 'Lo que viene', 'body' => 'Estamos preparando nuevas líneas: sopas, snacks y sake.'],
         ];
 
         return self::render_template('value', [
@@ -197,25 +244,33 @@ final class AsianBites_Home {
 
     public static function render_categories(array $atts = []): string {
         $atts = shortcode_atts([
-            'cat_1_title' => 'Snacks y dulces',
-            'cat_1_url' => '/categoria-producto/snacks',
-            'cat_2_title' => 'Ramen instantáneo',
-            'cat_2_url' => '/categoria-producto/ramen',
-            'cat_3_title' => 'Bebidas asiáticas',
-            'cat_3_url' => '/categoria-producto/bebidas',
-            'cat_4_title' => 'Kits para regalo',
-            'cat_4_url' => '/categoria-producto/regalos',
+            'cat_1_title' => 'Soju Fresh',
+            'cat_1_url' => '/categoria-producto/soju-fresh',
+            'cat_1_image_id' => '',
+            'cat_2_title' => 'Soju Uva Verde',
+            'cat_2_url' => '/categoria-producto/soju-uva-verde',
+            'cat_2_image_id' => '',
+            'cat_3_title' => 'Soju Durazno',
+            'cat_3_url' => '/categoria-producto/soju-durazno',
+            'cat_3_image_id' => '',
+            'cat_4_title' => 'Próximamente: sopas, snacks y sake',
+            'cat_4_url' => '/tienda',
+            'cat_4_image_id' => '',
         ], $atts, 'ab_home_categories');
 
         return self::render_template('categories', [
             'cat_1_title' => sanitize_text_field($atts['cat_1_title']),
             'cat_1_url' => esc_url_raw($atts['cat_1_url']),
+            'cat_1_image_html' => self::build_supporting_image_html($atts['cat_1_image_id'], 'ab-tile__image'),
             'cat_2_title' => sanitize_text_field($atts['cat_2_title']),
             'cat_2_url' => esc_url_raw($atts['cat_2_url']),
+            'cat_2_image_html' => self::build_supporting_image_html($atts['cat_2_image_id'], 'ab-tile__image'),
             'cat_3_title' => sanitize_text_field($atts['cat_3_title']),
             'cat_3_url' => esc_url_raw($atts['cat_3_url']),
+            'cat_3_image_html' => self::build_supporting_image_html($atts['cat_3_image_id'], 'ab-tile__image'),
             'cat_4_title' => sanitize_text_field($atts['cat_4_title']),
             'cat_4_url' => esc_url_raw($atts['cat_4_url']),
+            'cat_4_image_html' => self::build_supporting_image_html($atts['cat_4_image_id'], 'ab-tile__image'),
         ]);
     }
 
@@ -259,7 +314,36 @@ final class AsianBites_Home {
     }
 
     public static function render_about(array $atts = []): string {
-        return self::render_template('about', []);
+        $atts = shortcode_atts([
+            'title' => 'Somos Asian Bites',
+            'summary' => 'Hoy somos especialistas en Soju (Fresh, Uva Verde y Durazno) para acompañar la vida real: planes simples, momentos espontáneos y cero complicaciones. Nuestro mantra es claro: “Abre, sirve, sigue. Sin protocolos. Sin complicaciones.” Mientras seguimos creciendo, también exploramos nuevas categorías como sopas, snacks y sake.',
+            'about_mascot_image_id' => '',
+        ], $atts, 'ab_home_about');
+
+        return self::render_template('about', [
+            'title' => sanitize_text_field($atts['title']),
+            'summary' => sanitize_textarea_field($atts['summary']),
+            'mascot_html' => self::build_supporting_image_html($atts['about_mascot_image_id'], 'ab-about__mascot'),
+        ]);
+    }
+
+    private static function build_supporting_image_html($image_id, string $class_name, bool $lazy = true): string {
+        $attachment_id = absint((string) $image_id);
+
+        if (0 === $attachment_id) {
+            return '';
+        }
+
+        return (string) wp_get_attachment_image(
+            $attachment_id,
+            'medium_large',
+            false,
+            [
+                'class' => $class_name,
+                'loading' => $lazy ? 'lazy' : 'eager',
+                'decoding' => 'async',
+            ]
+        );
     }
 
     public static function render_faq(array $atts = []): string {
